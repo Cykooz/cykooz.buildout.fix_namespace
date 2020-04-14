@@ -14,7 +14,7 @@
 CHANGELOG
 *********
 
-Next release
-============
+1.0 (2020-04-14)
+================
 
 - Initial release.

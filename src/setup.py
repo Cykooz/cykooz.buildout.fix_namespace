@@ -46,7 +46,7 @@ CHANGES = open(os.path.join(HERE, 'CHANGES.rst')).read()
 setup(
     name='cykooz.buildout.fixnamespace',
     version=version.get_version(),
-    description=u'A zc.buildout extension to fix value of NAMESPACE_PACKAGE_INIT constant from setuptools',
+    description=u'A zc.buildout extension changes value of NAMESPACE_PACKAGE_INIT constant from setuptools',
     long_description=README + '\n\n' + CHANGES,
     long_description_content_type='text/x-rst',
     keywords='development build',

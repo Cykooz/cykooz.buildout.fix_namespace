@@ -3,6 +3,10 @@
 :Authors: cykooz
 :Date: 14.04.2020
 """
+import os
+
+import shutil
+
 from .extension import get_namespaces, fix_namespace_packages_txt
 
 
@@ -53,7 +57,9 @@ def test_fix_namespaces(tmp_path):
     info_dir = tmp_path / distinfo_dir
     info_dir.mkdir()
     toplevel_file = info_dir / 'top_level.txt'
-    toplevel_file.open('wt').writelines(['root'])
+    with toplevel_file.open('wt') as f:
+        f.write('root\n')
+        f.write('scripts\n')
 
     fix_namespace_packages_txt(tmp_path, distinfo_dir)
     namespace_packages_file = info_dir / 'namespace_packages.txt'
@@ -65,3 +71,10 @@ def test_fix_namespaces(tmp_path):
         'root.sub2',
         'root.sub2.sub4',
     ]
+
+    shutil.rmtree(sub2)
+    root_init = root_dir / '__init__.py'
+    root_init.open('wt').close()
+    os.remove(namespace_packages_file)
+    fix_namespace_packages_txt(tmp_path, distinfo_dir)
+    assert not namespace_packages_file.is_file()

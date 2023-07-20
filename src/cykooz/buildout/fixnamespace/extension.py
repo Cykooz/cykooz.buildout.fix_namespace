@@ -62,8 +62,7 @@ def fix_namespace_packages_txt(dest, distinfo_dir):
             continue
         namespaces.update(n for n in get_namespaces(top_dir) if n)
     if namespaces:
-        namespaces = list(namespaces)
-        namespaces.sort()
+        namespaces = sorted(namespaces)
         with namespace_packages_file.open('wt') as f:
             for namespace in namespaces:
                 f.write(namespace + '\n')
@@ -73,33 +72,35 @@ def get_namespaces(root_dir: Path):
     dir_names, has_init = get_child_dirs(root_dir)
     if not dir_names:
         if has_init:
-            yield None
-        return
+            return [None]
+        return []
+    namespaces = set()
     root_name = root_dir.name
     for dir_name in dir_names:
         child_dir = root_dir / dir_name
         child_namespaces = get_namespaces(child_dir)
         for namespace in child_namespaces:
             if namespace is None:
-                yield root_name
+                namespaces.add(root_name)
             else:
-                yield f'{root_name}.{namespace}'
+                namespaces.add(f'{root_name}.{namespace}')
+    if namespaces:
+        namespaces.add(root_name)
+    return sorted(namespaces)
 
 
 def get_child_dirs(path: Path) -> tuple[list[str], bool]:
+    init_path = path / '__init__.py'
+    has_init = init_path.is_file()
+    if has_init:
+        return [], True
     dirs = []
-    has_files = False
-    has_init = False
     for name in os.listdir(path):
         p = path / name
         if p.is_file():
-            has_files = True
-            if name == '__init__.py':
-                has_init = True
+            return [], False
         elif p.is_dir():
             dirs.append(name)
-    if has_files:
-        return [], has_init
     return dirs, False
 
 

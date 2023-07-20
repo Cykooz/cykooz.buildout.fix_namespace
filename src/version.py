@@ -120,7 +120,10 @@ def get_version():
         version = StrictVersion('0.0')
     if not release_version or version != release_version:
         write_release_version(version)
-    return str(version)
+    version = str(version)
+    if version.count('.') == 1:
+        version += '.0'
+    return version
 
 
 def get_version_for_new_release():
@@ -139,7 +142,8 @@ def main():
                              'and current date. You can use "auto" as version number for generate '
                              'version number automatically')
     args = parser.parse_args()
-    if not args.version:
+    args_version = (args.version or '').strip()
+    if not args_version:
         print(get_version())
         return
 
@@ -149,19 +153,22 @@ def main():
             print(version)
             return
     except ValueError:
-        if args.version == 'auto':
+        if args_version == 'auto':
             raise
-        version = args.version
+        version = args_version
 
     with open(CHANGES_FILE, 'rt') as f:
         changes = f.read()
     find = 'Next release\n============\n'
     if find in changes:
-        if args.version == 'auto':
+        if args_version == 'auto':
             # Increase the patch number to account for the additional commit.
             version.version = (version.version[0], version.version[1], version.version[2] + 1)
         else:
-            version = StrictVersion(args.version)
+            version = StrictVersion(args_version)
+        version = str(version)
+        if version.count('.') == 1:
+            version += '.0'
         replace = '%s (%s)' % (version, datetime.date.today().strftime('%Y-%m-%d'))
         replace = '%s\n%s\n' % (replace, '=' * len(replace))
         new_changes = changes.replace(find, replace)

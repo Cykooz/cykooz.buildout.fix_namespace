@@ -3,73 +3,65 @@
 :Authors: cykooz
 :Date: 14.04.2020
 """
-from __future__ import print_function, unicode_literals
-
-import os
-from collections import namedtuple
-
-import pytest
-import zc.buildout.testing
-import setuptools.wheel
-from . import extension
+from .extension import get_namespaces, fix_namespace_packages_txt
 
 
-ORIGIN_NAMESPACE_PACKAGE_INIT = setuptools.wheel.NAMESPACE_PACKAGE_INIT
+def test_fix_namespaces(tmp_path):
+    root_dir = tmp_path / 'root'
+    root_dir.mkdir()
 
-BUILDOUT_CFG = '''
-[buildout]
-extensions = cykooz.buildout.fixnamespace
-eggs-directory = eggs
-download-cache = download
-#install-from-cache = true
-newest = false
-abi-tag-eggs = false
-versions = versions
-parts = packages
+    # No files and dirs
+    assert list(get_namespaces(root_dir)) == []
 
-[packages]
-recipe = zc.recipe.egg:eggs
-eggs = zope.interface
+    sub1 = root_dir / 'sub1'
+    sub1.mkdir()
+    # One sub dir without files and dirs
+    assert list(get_namespaces(root_dir)) == []
 
-[versions]
-setuptools = 44.0.0
-'''
+    sub1_init = sub1 / '__init__.py'
+    sub1_init.open('wt').close()
+    # One sub dir with file
+    assert list(get_namespaces(root_dir)) == ['root']
 
+    sub2 = root_dir / 'sub2'
+    sub2.mkdir()
+    # One sub dir with file and one without
+    assert list(get_namespaces(root_dir)) == ['root']
 
-@pytest.fixture(name='buildout_env')
-def buildout_env_fixture():
-    TestEnv = namedtuple('TestEnv', ['globs'])
-    test_env = TestEnv(globs={})
-    zc.buildout.testing.buildoutSetUp(test_env)
-    buildout_dir = test_env.globs['sample_buildout']
-    download_cache = os.path.join(buildout_dir, 'download', 'dist')
-    os.makedirs(download_cache)
-    src_path = os.path.abspath(__file__)
-    for _ in range(4):
-        src_path = os.path.dirname(src_path)
-    zc.buildout.testing.sdist(src_path, download_cache)
-    try:
-        yield test_env.globs
-    finally:
-        zc.buildout.testing.buildoutTearDown(test_env)
+    sub3 = sub2 / 'sub3'
+    sub3.mkdir()
+    # One sub dir with file and two without
+    assert list(get_namespaces(root_dir)) == ['root']
 
+    sub3_init = sub3 / '__init__.py'
+    sub3_init.open('wt').close()
+    assert list(get_namespaces(root_dir)) == ['root.sub2', 'root']
 
-def test_extension(buildout_env):
-    assert setuptools.wheel.NAMESPACE_PACKAGE_INIT == ORIGIN_NAMESPACE_PACKAGE_INIT
+    sub4 = sub2 / 'sub4'
+    sub4.mkdir()
+    sub5 = sub4 / 'sub5'
+    sub5.mkdir()
+    sub5_init = sub5 / '__init__.py'
+    sub5_init.open('wt').close()
+    assert list(get_namespaces(root_dir)) == [
+        'root.sub2',
+        'root.sub2.sub4',
+        'root'
+    ]
 
-    sample_buildout = buildout_env['sample_buildout']
-    write = buildout_env['write']
-    system = buildout_env['system']
-    buildout = buildout_env['buildout']
+    distinfo_dir = 'root.sub2-1.0.dist-info'
+    info_dir = tmp_path / distinfo_dir
+    info_dir.mkdir()
+    toplevel_file = info_dir / 'top_level.txt'
+    toplevel_file.open('wt').writelines(['root'])
 
-    write(sample_buildout, 'buildout.cfg', BUILDOUT_CFG)
-    res = system(buildout)
-    assert 'Monkey-patching setuptools to fix content of namespace-file' in res
-
-    eggs_dir = os.path.join(sample_buildout, 'eggs')
-    for name in os.listdir(eggs_dir):
-        if name.startswith('zope.interface-'):
-            path = os.path.join(eggs_dir, name, 'zope', '__init__.py')
-            content = open(path, 'rt').read()
-            assert content == extension.NAMESPACE_PACKAGE_INIT
-            break
+    fix_namespace_packages_txt(tmp_path, distinfo_dir)
+    namespace_packages_file = info_dir / 'namespace_packages.txt'
+    assert namespace_packages_file.is_file()
+    with namespace_packages_file.open('rt') as f:
+        namespaces = [s.strip() for s in f.readlines()]
+    assert namespaces == [
+        'root',
+        'root.sub2',
+        'root.sub2.sub4',
+    ]

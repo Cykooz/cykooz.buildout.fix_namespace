@@ -2,15 +2,11 @@
 cykooz.buildout.fixnamespace
 ****************************
 
-This buildout extension changes value of NAMESPACE_PACKAGE_INIT
-constant from ``setuptools``. This value used to fix namespace packages
-installed from wheels (https://github.com/pypa/setuptools/issues/2069).
-
-Extension replace value of NAMESPACE_PACKAGE_INIT with code:
-
-.. code-block:: python
-
-    __path__ = __import__('pkgutil').extend_path(__path__, __name__)
+This buildout extension monkey-patch function
+``zc.buildout.easy_install.make_egg_after_pip_install``
+to create file ``namespace_packages.txt`` for some packages with
+native namespaces (`PEP-420 <https://peps.python.org/pep-0420/>`_)
+which doesn't have it.
 
 Minimal usage example::
 

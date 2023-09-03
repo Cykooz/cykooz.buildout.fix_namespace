@@ -9,8 +9,8 @@
 CHANGELOG
 *********
 
-Next release
-============
+2.0.0 (2023-09-03)
+==================
 
 - Added fix that creates ``namespace_packages.txt`` for some packages with
   native namespaces which doesn't have it.

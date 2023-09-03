@@ -20,12 +20,22 @@ def load_extension(buildout):
     )
 
     orig_make_egg_after_pip_install = easy_install.make_egg_after_pip_install
+    orig_get_dist = easy_install.Installer._get_dist
 
     def make_egg_after_pip_install(dest, distinfo_dir):
         fix_namespace_packages_txt(dest, distinfo_dir)
         return orig_make_egg_after_pip_install(dest, distinfo_dir)
 
+    def _get_dist(self, *args, **kwargs):
+        dists = orig_get_dist(self, *args, **kwargs)
+        for dist in dists:
+            dist_path = Path(os.path.normpath(dist.location))
+            fix_namespace_packages_txt(dist_path, 'EGG-INFO')
+            create_namespace_init(dist_path, 'EGG-INFO')
+        return dists
+
     easy_install.make_egg_after_pip_install = make_egg_after_pip_install
+    easy_install.Installer._get_dist = _get_dist
 
 
 def fix_namespace_packages_txt(dest, distinfo_dir):
@@ -92,3 +102,25 @@ def get_child_dirs(path: Path) -> tuple[list[str], bool]:
         elif p.is_dir():
             dirs.append(name)
     return dirs, False
+
+
+NAMESPACE_PACKAGE_INIT = \
+    "__import__('pkg_resources').declare_namespace(__name__)\n"
+
+
+def create_namespace_init(dest: Path, distinfo_dir: str):
+    namespace_packages_file = dest / distinfo_dir / 'namespace_packages.txt'
+    if namespace_packages_file.is_file():
+        with namespace_packages_file.open() as f:
+            namespace_packages = [
+                line.strip().replace('.', os.path.sep)
+                for line in f.readlines()
+            ]
+
+        for namespace_package in namespace_packages:
+            namespace_package_dir = dest / namespace_package
+            if namespace_package_dir.is_dir():
+                init_py_file = namespace_package_dir / '__init__.py'
+                if not init_py_file.is_file():
+                    with open(init_py_file, 'w') as f:
+                        f.write(NAMESPACE_PACKAGE_INIT)

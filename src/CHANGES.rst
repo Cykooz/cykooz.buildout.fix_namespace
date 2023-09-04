@@ -9,6 +9,11 @@
 CHANGELOG
 *********
 
+Next release
+============
+
+- Added support of packages without ``top_level.txt`` file.
+
 2.0.2 (2023-09-03)
 ==================
 

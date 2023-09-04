@@ -38,9 +38,11 @@ def load_extension(buildout):
     easy_install.Installer._get_dist = _get_dist
 
 
-def fix_namespace_packages_txt(dest, distinfo_dir):
+def fix_namespace_packages_txt(dest, distinfo_dir: str):
     dest = Path(dest)
     distinfo_dir = dest / distinfo_dir
+    if not distinfo_dir.is_dir():
+        return
     namespace_packages_file = distinfo_dir / 'namespace_packages.txt'
     if namespace_packages_file.is_file():
         return
@@ -49,11 +51,24 @@ def fix_namespace_packages_txt(dest, distinfo_dir):
     if top_level_file.is_file():
         with top_level_file.open('rt') as f:
             top_levels = filter(
-                lambda x: len(x) != 0,
+                lambda x: len(x) > 0,
                 (line.strip() for line in f.readlines())
             )
     else:
-        top_levels = ()
+        top_levels = []
+        for entry in os.scandir(dest):
+            if not entry.is_dir():
+                continue
+            path = Path(entry.path)
+            if path == distinfo_dir:
+                continue
+            for _, _, file_names in os.walk(path):
+                if any(
+                        name.endswith(('.py', '.pyc', '.pyo', '.pyd'))
+                        for name in file_names
+                ):
+                    top_levels.append(entry.name)
+                    break
 
     namespaces = set()
     for top_level in top_levels:
@@ -104,8 +119,7 @@ def get_child_dirs(path: Path) -> tuple[list[str], bool]:
     return dirs, False
 
 
-NAMESPACE_PACKAGE_INIT = \
-    "__import__('pkg_resources').declare_namespace(__name__)\n"
+NAMESPACE_PACKAGE_INIT = "__import__('pkg_resources').declare_namespace(__name__)\n"
 
 
 def create_namespace_init(dest: Path, distinfo_dir: str):

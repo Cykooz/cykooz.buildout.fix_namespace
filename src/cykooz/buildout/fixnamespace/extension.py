@@ -88,6 +88,10 @@ def get_namespaces(root_dir: Path):
     if not dir_names:
         if has_init:
             return [None]
+        for name in os.listdir(root_dir):
+            p = root_dir / name
+            if p.is_file() and name.endswith(('.py', '.pyc', '.pyo', '.pyd')):
+                return [root_dir.name]
         return []
     namespaces = set()
     root_name = root_dir.name

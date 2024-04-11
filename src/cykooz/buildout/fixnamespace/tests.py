@@ -25,6 +25,7 @@ def _create_fs_tree(root_dir: Path, paths: list[str]):
     ['paths', 'result'],
     [
         ([], []),
+        (['context.py'], ['root']),
         (['sub1'], []),
         (['sub1/__init__.py'], ['root']),
         (['sub1/sub2/__init__.py'], ['root', 'root.sub1']),

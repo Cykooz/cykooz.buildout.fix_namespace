@@ -9,8 +9,8 @@
 CHANGELOG
 *********
 
-Next release
-============
+2.0.6 (2024-04-11)
+==================
 
 - Added support of namespaced package with python-files but without subdirectories.
 
